@@ -1,5 +1,5 @@
 server/venv
 server/keys/privatekey.pem
 RSA/
-nginx/
+/nginx
 .DS_Store
