@@ -1,13 +1,19 @@
 ingresar a la carpeta server
-cd server
+
+    cd server
 
 Crear entorno virtual
+
     python3 -m venv venv
 
-Activar Entornr virtual
+Activar entorno virtual
+
     source venv/bin/activate 
+    
 Instalamos los requerimientos
 
     pip3 install -r requeriments.txt 
     
-Ejecutar aplicacion       
+Ejecutar aplicacion
+
+    python3 app.py
