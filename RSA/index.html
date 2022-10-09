@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RSAES-OAEP-`</title>
+</head>
+<body>
+     
+    <input type="Radio" checked name="selector" onclick="handleClick(this);" value="URL">Remote Key
+    <input type="Radio" name="selector" onclick="handleClick(this);" value="Llave" >Write key<br> <br>
+    <input type="text" id="urlkey"  placeholder="Type url key..." size="40"> <br><br>
+    <button id="btnDownloadKey" >Download key</button><br>
+    <textarea id="keytext" style="display: none;" rows="14" cols="40"  placeholder="Paste public key" ></textarea><br>
+    <input type="text" id="plaintext" placeholder="Type credit card..." maxlength="64" size="40"><br><br>
+    <input type="button" value="Encrypt" onclick="encryptandusekey()">
+    <h3>Cryptogram:</h3>
+    <textarea id="cryptogram" rows="14" cols="40" >RSAES-OAEP</textarea>
+</body>
+
+<script>
+    function handleClick(myRadio) {
+        if(myRadio.value=="URL"){
+            document.getElementById("keytext").style.display = 'none';
+            document.getElementById("btnDownloadKey").style.display = 'inline';
+            document.getElementById("urlkey").style.display = 'inline';
+            document.getElementById("cryptogram").innerText=""
+            
+
+        }else{
+            document.getElementById("keytext").value=''
+            document.getElementById("keytext").style.display = 'inline';
+            document.getElementById("btnDownloadKey").style.display = 'none';
+            document.getElementById("urlkey").style.display = 'none';
+            document.getElementById("cryptogram").innerText=""
+        }
+        
+        
+    }
+
+    const btnD = document.querySelector('#btnDownloadKey');
+    btnD.onclick = function () {
+            urlkey=document.getElementById("urlkey").value;
+            
+            if(urlkey.length>0){
+                fetch(urlkey)
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById("keytext").value=data
+                    document.getElementById("keytext").style.display = 'inline';
+                });
+                
+            }else{
+                alert("Type url key")
+            }
+    };
+
+        
+    async function encryptandusekey() {
+                   
+        try {
+    
+            plaintext=document.getElementById("plaintext").value;
+            if (plaintext.length>0){
+                pem=document.getElementById("keytext").value
+                var pub = await importPublicKey(pem);
+                var encrypted = await encryptRSA(pub, new TextEncoder().encode(plaintext));
+                var encryptedBase64 = window.btoa(ab2str(encrypted));
+                console.log(encryptedBase64)
+                document.getElementById("cryptogram").innerText=(encryptedBase64.replace(/(.{64})/g, "$1\n").split("\n").join(""));
+                plaintext=''
+                document.getElementById("plaintext").value='';
+            }else{
+                alert("Type secret chain")
+            }
+
+
+        } catch(error) {
+            document.getElementById("cryptogram").innerText=""
+            document.getElementById("plaintext").value='';
+            alert("wrong key ...");
+        }
+    }
+
+    async function importPublicKey(spkiPem) {       
+        return await window.crypto.subtle.importKey(
+            "spki",
+            getSpkiDer(spkiPem),
+            {
+                name: "RSA-OAEP",
+                hash: "SHA-256",
+            },
+            true,
+            ["encrypt"]
+        );
+    }
+
+    async function encryptRSA(pub,plaintext) {
+        let encrypted = await window.crypto.subtle.encrypt(
+            {
+                name: "RSA-OAEP"
+            },
+            pub,
+            plaintext
+            
+        );
+        return encrypted;
+        
+    }
+
+    function getSpkiDer(spkiPem){
+        const pemHeader = "-----BEGIN PUBLIC KEY-----";
+        const pemFooter = "-----END PUBLIC KEY-----";
+        var pemContents = spkiPem.substring(pemHeader.length, spkiPem.length - pemFooter.length);
+        var binaryDerString = window.atob(pemContents);
+        return str2ab(binaryDerString); 
+    }
+
+    function str2ab(str) {
+        const buf = new ArrayBuffer(str.length);
+        const bufView = new Uint8Array(buf);
+        for (let i = 0, strLen = str.length; i < strLen; i++) {
+            bufView[i] = str.charCodeAt(i);
+        }
+        return buf;
+    }
+
+    function ab2str(buf) {
+        return String.fromCharCode.apply(null, new Uint8Array(buf));
+    }
+
+</script>
+</html>

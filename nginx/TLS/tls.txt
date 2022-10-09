@@ -1,0 +1,58 @@
+docker container run -d --name nginx --rm nginx
+sudo nmap -sS $(docker container inspect --format '{{ .NetworkSettings.IPAddress }}' nginx)
+
+
+#Ejecutar los siguientes comandos:
+
+openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=example Inc./CN=example.com' -keyout example.com.key -out example.com.crt
+openssl req -out nginx.example.com.csr -newkey rsa:2048 -nodes -keyout nginx.example.com.key -subj "/CN=client.example.com/O=some organization"
+openssl x509 -req -sha256 -days 365 -CA example.com.crt -CAkey example.com.key -set_serial 0 -in nginx.example.com.csr -out nginx.example.com.crt
+
+Analizar los archivos generados en el siguiente enlace
+https://www.sslshopper.com/
+
+
+mkdir -p /etc/nginx-server-certs/
+docker cp nginx.example.com.crt nginx:/etc/nginx-server-certs/.
+docker cp nginx.example.com.key nginx:/etc/nginx-server-certs/.
+
+#Generar el archivo de configuración de nginx (ejecutar dentro del contenedor)
+docker container exec -it nginx
+cd /etc/nginx
+cat <<\EOF > ./nginx.conf
+events {
+}
+
+http {
+  log_format main '$remote_addr - $remote_user [$time_local]  $status '
+  '"$request" $body_bytes_sent "$http_referer" '
+  '"$http_user_agent" "$http_x_forwarded_for"';
+  access_log /var/log/nginx/access.log main;
+  error_log  /var/log/nginx/error.log;
+
+  server {
+    listen 443 ssl;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    server_name nginx.example.com;
+    ssl_certificate /etc/nginx-server-certs/nginx.example.com.crt;
+    ssl_certificate_key /etc/nginx-server-certs/nginx.example.com.key;
+  }
+}
+EOF
+
+#reiniciar el contenedor
+docker container restart nginx 
+
+#probar la conexión
+sudo nmap -sS $(docker container inspect --format '{{ .NetworkSettings.IPAddress }}' nginx)
+curl http://172.17.0.2 -v
+curl -k -v https://172.17.0.2
+openssl s_client -showcerts -connect 172.17.0.2:443
+
+#¿porque el navegador genera un error de ssl?
+# Actividad -> Solucionar el problema
+
+
