@@ -1,2 +1,5 @@
-./venv
-./keys/privatekey.pem
+server/venv
+server/keys/privatekey.pem
+RSA/
+nginx/
+.DS_Store
