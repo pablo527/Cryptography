@@ -1,8 +1,10 @@
-
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 import base64
 from Crypto.Hash import SHA256
+from flask import Flask, jsonify, request
+
+app = Flask(__name__)
 
 def generate_keys():
     keyPair = RSA.generate(1024)
@@ -13,27 +15,33 @@ def generate_keys():
         file.write(keyPair.exportKey())
         file.close()
 
-def encrypt():
-    mesnaje = b'777'
+def encrypt(message):
+    message = base64.decodebytes(message.encode('utf8'))
     key = RSA.importKey(open('keys/publickey.pem', 'rb').read())
     cifrado = PKCS1_OAEP.new(key)
-    mensaje_cifrado = cifrado.encrypt(mesnaje)
+    mensaje_cifrado = cifrado.encrypt(message,hashAlgo=SHA256)
     return mensaje_cifrado
-   
-def decrypt():
-    with open('text.txt', 'r') as f:
-        crypto_msg = f.read()
-    crypto_msg = base64.decodebytes(crypto_msg.encode('utf8'))
 
+def decrypt_cryptogram(message):
+    message = base64.decodebytes(message.encode('utf8'))
     with open('keys/privatekey.pem', 'r') as f:
         privatekey = f.read()
         f.close()
     key = RSA.importKey(privatekey)
-    crifrado = PKCS1_OAEP.new(key,hashAlgo=SHA256)
-    mesj_decrypt = crifrado.decrypt(crypto_msg)
+    encryption = PKCS1_OAEP.new(key,hashAlgo=SHA256)    
+    mesj_decrypt = encryption.decrypt(message)    
     return mesj_decrypt.decode('utf8')
+   
+ 
+@app.route('/decrypt', methods=['POST'])
+def decrypt():
+    request_data = request.get_json()
+    cryptogram = request_data['cryptogram'] 
+    decrypted = decrypt_cryptogram(cryptogram)
+ 
+    return jsonify({'message_decrypted':decrypted})
 
 if __name__ == "__main__":
-    #generate_keys()
-    #mesj = encrypt()
-    print(decrypt())
+    app.run(host="0.0.0.0", port=8000)
+
+
